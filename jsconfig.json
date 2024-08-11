@@ -1,7 +1,9 @@
 {
   "compilerOptions": {
+    "baseUrl": "./", // Add the baseUrl setting with a leading './'
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@/lib/*": ["./lib/*"] // Add a leading './' to the non-relative path
     }
   }
 }

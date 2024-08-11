@@ -9,9 +9,15 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.624.0",
+    "@aws-sdk/lib-dynamodb": "^3.624.0",
+    "axios": "^1.7.3",
+    "bcrypt": "^5.1.1",
+    "bcryptjs": "^2.4.3",
+    "next": "14.2.5",
+    "pos-local1": "file:",
     "react": "^18",
-    "react-dom": "^18",
-    "next": "14.2.5"
+    "react-dom": "^18"
   },
   "devDependencies": {
     "postcss": "^8",
