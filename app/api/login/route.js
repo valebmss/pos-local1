@@ -30,7 +30,7 @@ export async function POST(req) {
     }
 
     // Aquí puedes guardar la sesión usando cookies o JWT
-    return new Response(JSON.stringify({ message: 'Login successful', userData: Item.nombre }), { status: 200 });
+    return new Response(JSON.stringify({ message: 'Login successful', userData: Item }), { status: 200 });
   } catch (error) {
     console.error('An error occurred:', error);
     console.log("KEY: ", usuario_id);
