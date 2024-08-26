@@ -8,16 +8,17 @@ const SECRET_KEY = process.env.JWT_SECRET;
 export function middleware(req) {
   const cookies = parse(req.headers.get('cookie') || '');
   const token = cookies.authToken;
+  console.log("TOKENNN:", token);
 
   if (!token) {
-    return NextResponse.redirect(new URL('/', req.url));
+    console.log("NO TOKEN");
   }
 
   try {
     jwt.verify(token, SECRET_KEY);
     return NextResponse.next();
   } catch (err) {
-    return NextResponse.redirect(new URL('/', req.url));
+    console.log("ERROR:", err);
   }
 }
 
