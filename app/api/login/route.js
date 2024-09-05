@@ -39,14 +39,14 @@ export async function POST(req) {
       nombre: Item.nombre, // Agrega cualquier otra información que desees incluir
     };
 
+
         // Genera el token JWT
     const token = jwt.sign(payload, SECRET_KEY, { expiresIn: '12h' });
 
         // Configura la cookie
         const cookie = serialize('authToken', token, {
-          httpOnly: true,
           maxAge: 3600, // 1 hora
-          path: '/dashboard',
+          path: '/',
         });
     // Aquí puedes guardar la sesión usando cookies o JWT
     return new Response(JSON.stringify({ message: 'Login successful', userData: Item }), {
@@ -57,7 +57,6 @@ export async function POST(req) {
     });
   } catch (error) {
     console.error('An error occurred:', error);
-    console.log("KEY: ", usuario_id);
     return new Response(JSON.stringify({ message: 'Internal server error', error: error.message }), { status: 500 });
   }
 }
