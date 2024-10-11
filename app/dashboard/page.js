@@ -75,7 +75,7 @@ export default function Dashboard() {
     </button>
     </Link>
     
-    <Link href="/providers">
+    <Link href="/provedores">
     <button className="bg-yellow-500 text-white p-6 rounded-lg shadow-lg hover:bg-yellow-600 transition duration-300">
       <h3 className="text-xl font-bold">Proveedores</h3>
       <p className="mt-2 text-sm">Administración de proveedores</p>

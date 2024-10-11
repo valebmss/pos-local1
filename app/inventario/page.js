@@ -17,6 +17,19 @@ const fetchInventoryData = async () => {
     return [];
   }
 };
+const fetchProveedorData = async () => {
+  const params = {
+    TableName: 'Proveedor',
+  };
+
+  try {
+    const data = await ddbDocClient.send(new ScanCommand(params));
+    return data.Items;
+  } catch (err) {
+    console.error('Error fetching data:', err);
+    return [];
+  }
+};
 
 const addNewProduct = async (newProduct) => {
   const params = {
@@ -35,13 +48,15 @@ const addNewProduct = async (newProduct) => {
 
 export default function Inventario() {
   const [inventoryItems, setInventoryItems] = useState([]);
+  const [proveedores, setProveedores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [newProduct, setNewProduct] = useState({
     product_id: '',
     nombre: '',
     categoria: '',
-    precio: '',
+    precio_venta: '',
+    precio_costo: '',
     stock: '',
     descripcion: '',
     proveedor: ''
@@ -55,6 +70,8 @@ export default function Inventario() {
     const fetchData = async () => {
       const data = await fetchInventoryData();
       setInventoryItems(data);
+      const data_proveedor = await fetchProveedorData();
+      setProveedores(data_proveedor);
       setLoading(false);
     };
 
@@ -154,9 +171,18 @@ export default function Inventario() {
           <input
             type="number"
             name="precio"
-            value={newProduct.precio}
+            value={newProduct.precio_venta}
             onChange={handleInputChange}
-            placeholder="Precio"
+            placeholder="Precio Venta"
+            className="p-2 border border-gray-300 rounded"
+            required
+          />
+                    <input
+            type="number"
+            name="precio"
+            value={newProduct.precio_costo}
+            onChange={handleInputChange}
+            placeholder="Precio Costo"
             className="p-2 border border-gray-300 rounded"
             required
           />
@@ -177,15 +203,20 @@ export default function Inventario() {
             placeholder="Descripción"
             className="p-2 border border-gray-300 rounded"
           />
-          <input
-            type="text"
-            name="proveedor"
-            value={newProduct.proveedor}
-            onChange={handleInputChange}
-            placeholder="Proveedor"
-            className="p-2 border border-gray-300 rounded"
-            required
-          />
+ <select
+          name="proveedor"
+          value={newProduct.proveedor}
+          onChange={handleInputChange}
+          className="p-2 border border-gray-300 rounded"
+          required
+        >
+          <option value="">Seleccione un proveedor</option>
+          {proveedores.map((proveedor, index) => (
+            <option key={index} value={proveedor.tienda}>
+              {proveedor.tienda}
+            </option>
+          ))}
+        </select>
         </div>
         <button type="submit" className="mt-4 bg-blue-500 text-white p-2 rounded">
           Añadir Producto
