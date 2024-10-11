@@ -3,6 +3,9 @@
 import ddbDocClient from "@/lib/aws";
 import { ScanCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
 import { useEffect, useState } from 'react';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+
 
 const fetchInventoryData = async () => {
   const params = {
@@ -85,6 +88,33 @@ const updateProduct = async (product) => {
     return false;
   }
 };
+const generatePDF = async () => {
+  const input = document.getElementById('inventory-table');
+  
+  const canvas = await html2canvas(input);
+  const imgData = canvas.toDataURL('image/png');
+  
+  const pdf = new jsPDF();
+  const imgWidth = 190; // Ajusta el ancho según sea necesario
+  const pageHeight = pdf.internal.pageSize.height;
+  const imgHeight = (canvas.height * imgWidth) / canvas.width;
+  let heightLeft = imgHeight;
+
+  let position = 0;
+
+  pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+  heightLeft -= pageHeight;
+
+  while (heightLeft >= 0) {
+    position = heightLeft - imgHeight;
+    pdf.addPage();
+    pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+  }
+
+  pdf.save('inventario.pdf');
+};
+
 export default function Inventario() {
   const [inventoryItems, setInventoryItems] = useState([]);
   const [proveedores, setProveedores] = useState([]);
@@ -208,6 +238,12 @@ export default function Inventario() {
       <h1 className="text-3xl font-bold mb-4">Inventario</h1>
 
       {/* Buscador */}
+      <button 
+  onClick={generatePDF} 
+  className="mt-4 bg-green-500 text-white p-2 rounded"
+>
+  Descargar PDF
+</button>
 
       {/* Formulario para añadir un nuevo producto */}
       <form onSubmit={handleAddOrUpdateProduct} className="mb-4">
@@ -304,7 +340,7 @@ export default function Inventario() {
 
       {/* Tabla del inventario */}
       <div className="overflow-x-auto">
-        <table className="min-w-full bg-white border border-gray-200 rounded-lg">
+        <table id="inventory-table" className="min-w-full bg-white border border-gray-200 rounded-lg">
           <thead>
             <tr className="bg-gray-200 text-gray-600 uppercase text-sm leading-normal">
               <th onClick={() => handleSort('product_id')} className="py-3 px-6 text-left cursor-pointer">Product ID</th>
