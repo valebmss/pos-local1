@@ -170,7 +170,7 @@ export default function Inventario() {
           />
           <input
             type="number"
-            name="precio"
+            name="precio_venta"
             value={newProduct.precio_venta}
             onChange={handleInputChange}
             placeholder="Precio Venta"
@@ -179,7 +179,7 @@ export default function Inventario() {
           />
                     <input
             type="number"
-            name="precio"
+            name="precio_costo"
             value={newProduct.precio_costo}
             onChange={handleInputChange}
             placeholder="Precio Costo"
@@ -239,7 +239,9 @@ export default function Inventario() {
               <th onClick={() => handleSort('product_id')} className="py-3 px-6 text-left cursor-pointer">Product ID</th>
               <th onClick={() => handleSort('nombre')} className="py-3 px-6 text-left cursor-pointer">Nombre</th>
               <th onClick={() => handleSort('categoria')} className="py-3 px-6 text-left cursor-pointer">Categoría</th>
-              <th onClick={() => handleSort('precio')} className="py-3 px-6 text-left cursor-pointer">Precio</th>
+              <th onClick={() => handleSort('precio_venta')} className="py-3 px-6 text-left cursor-pointer">Precio Venta</th>
+              <th onClick={() => handleSort('precio_costo')} className="py-3 px-6 text-left cursor-pointer">Precio Costo</th>
+
               <th onClick={() => handleSort('stock')} className="py-3 px-6 text-left cursor-pointer">Stock</th>
               <th onClick={() => handleSort('descripcion')} className="py-3 px-6 text-left cursor-pointer">Descripción</th>
               <th onClick={() => handleSort('proveedor')} className="py-3 px-6 text-left cursor-pointer">Proveedor</th>
@@ -251,7 +253,9 @@ export default function Inventario() {
                 <td className="py-3 px-6 text-left">{item.product_id}</td>
                 <td className="py-3 px-6 text-left">{item.nombre}</td>
                 <td className="py-3 px-6 text-left">{item.categoria}</td>
-                <td className="py-3 px-6 text-left">{item.precio}</td>
+                <td className="py-3 px-6 text-left">{item.precio_venta}</td>
+                <td className="py-3 px-6 text-left">{item.precio_costo}</td>
+
                 <td className="py-3 px-6 text-left">{item.stock}</td>
                 <td className="py-3 px-6 text-left">{item.descripcion}</td>
                 <td className="py-3 px-6 text-left">{item.proveedor}</td>

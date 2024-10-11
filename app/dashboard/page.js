@@ -50,11 +50,11 @@ export default function Dashboard() {
       </li>
     </ul>
     <div className="text-center">
-      <h1 className="text-2xl font-bold">Bienvenido, {user.nombre}</h1>
+      <h1 className="text-2xl font-bold">Bienvenido, {/*user.nombre*/}</h1>
     </div>
     <ul>
       <li>
-        <h2 className="text-sm text-gray-400">Usuario ID: {user.usuario_id}</h2>
+        <h2 className="text-sm text-gray-400">Usuario ID: {/*user.usuario_id*/}</h2>
       </li>
     </ul>
   </nav>
