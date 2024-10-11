@@ -30,7 +30,15 @@ const fetchProveedorData = async () => {
     return [];
   }
 };
+const formatPrice = (price) => {
+  if (price === '') return ''; // Para manejar el caso en que no hay precio
+  return `$${parseFloat(price).toLocaleString('es-CO')}`;
+};
 
+const parsePrice = (formattedPrice) => {
+  // Elimina el símbolo '$' y convierte a número
+  return parseFloat(formattedPrice.replace(/\./g, '').replace('$', '').trim());
+};
 const addNewProduct = async (newProduct) => {
   const params = {
     TableName: 'Inventario',
@@ -234,7 +242,7 @@ export default function Inventario() {
           <input
             type="number"
             name="precio_venta"
-            value={newProduct.precio_venta}
+            value={(newProduct.precio_venta)}
             onChange={handleInputChange}
             placeholder="Precio Venta"
             className="p-2 border border-gray-300 rounded"
@@ -243,7 +251,7 @@ export default function Inventario() {
                     <input
             type="number"
             name="precio_costo"
-            value={newProduct.precio_costo}
+            value={(newProduct.precio_costo)}
             onChange={handleInputChange}
             placeholder="Precio Costo"
             className="p-2 border border-gray-300 rounded"
@@ -314,12 +322,12 @@ export default function Inventario() {
           </thead>
           <tbody className="text-gray-600 text-sm font-light">
             {sortedItems.map(item => (
-              <tr key={item.product_id} className="border-b border-gray-200 hover:bg-gray-100">
+              <tr key={item.product_id} className={`border-b border-gray-200 hover:bg-gray-100 ${item.stock <= 0 ? 'bg-red-200 font-bold' : item.stock < 10 ? 'text-red-600' : ''}`}>
                 <td className="py-3 px-6 text-left">{item.product_id}</td>
                 <td className="py-3 px-6 text-left">{item.nombre}</td>
                 <td className="py-3 px-6 text-left">{item.categoria}</td>
-                <td className="py-3 px-6 text-left">{item.precio_venta}</td>
-                <td className="py-3 px-6 text-left">{item.precio_costo}</td>
+                <td className="py-3 px-6 text-left">{formatPrice(item.precio_venta)}</td>
+                <td className="py-3 px-6 text-left">{formatPrice(item.precio_costo)}</td>
 
                 <td className="py-3 px-6 text-left">{item.stock}</td>
                 <td className="py-3 px-6 text-left">{item.descripcion}</td>
