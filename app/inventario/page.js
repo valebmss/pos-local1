@@ -46,6 +46,37 @@ const addNewProduct = async (newProduct) => {
   }
 };
 
+const deleteProduct = async (productId) => {
+  const params = {
+    TableName: 'Inventario',
+    Key: {
+      product_id: productId,
+    },
+  };
+
+  try {
+    await ddbDocClient.send(new DeleteCommand(params));
+    return true;
+  } catch (err) {
+    console.error('Error deleting product:', err);
+    return false;
+  }
+};
+
+const updateProduct = async (product) => {
+  const params = {
+    TableName: 'Inventario',
+    Item: product,
+  };
+
+  try {
+    await ddbDocClient.send(new PutCommand(params));
+    return true;
+  } catch (err) {
+    console.error('Error updating product:', err);
+    return false;
+  }
+};
 export default function Inventario() {
   const [inventoryItems, setInventoryItems] = useState([]);
   const [proveedores, setProveedores] = useState([]);
@@ -63,6 +94,9 @@ export default function Inventario() {
   });
 
   const [searchTerm, setSearchTerm] = useState(''); // Para el buscador
+  const [isEditing, setIsEditing] = useState(false);
+  const [currentProductId, setCurrentProductId] = useState(null);
+
   const [sortColumn, setSortColumn] = useState(null); // Columna para ordenar
   const [sortOrder, setSortOrder] = useState('asc'); // Orden ascendente o descendente
 
@@ -83,28 +117,57 @@ export default function Inventario() {
     setNewProduct((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleAddProduct = async (e) => {
+  const handleAddOrUpdateProduct = async (e) => {
     e.preventDefault();
 
-    const newProductWithNumberId = {
+    const productData = {
       ...newProduct,
-      product_id: parseInt(newProduct.product_id, 10), // Convertir a número
+      product_id: parseInt(newProduct.product_id, 10),
     };
 
-    const success = await addNewProduct(newProductWithNumberId);
+    const success = isEditing
+      ? await updateProduct(productData) // Update if editing
+      : await addNewProduct(productData); // Add if not editing
+
     if (success) {
-      setInventoryItems((prev) => [...prev, newProductWithNumberId]);
+      setInventoryItems((prev) => {
+        if (isEditing) {
+          return prev.map(item =>
+            item.product_id === currentProductId ? productData : item
+          );
+        } else {
+          return [...prev, productData];
+        }
+      });
+
       setNewProduct({
         product_id: '',
         nombre: '',
         categoria: '',
-        precio: '',
+        precio_venta: '',
+        precio_costo: '',
         stock: '',
         descripcion: '',
         proveedor: ''
       });
+      setIsEditing(false);
+      setCurrentProductId(null);
     }
   };
+
+  const handleEditProduct = (item) => {
+    setNewProduct(item);
+    setIsEditing(true);
+    setCurrentProductId(item.product_id);
+  };
+
+  const handleDeleteProduct = async (productId) => {
+    const success = await deleteProduct(productId);
+    if (success) {
+      setInventoryItems((prev) => prev.filter(item => item.product_id !== productId));
+    }
+  };
+
 
   // Función para ordenar
   const handleSort = (column) => {
@@ -139,7 +202,7 @@ export default function Inventario() {
       {/* Buscador */}
 
       {/* Formulario para añadir un nuevo producto */}
-      <form onSubmit={handleAddProduct} className="mb-4">
+      <form onSubmit={handleAddOrUpdateProduct} className="mb-4">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <input
             type="number"
@@ -219,7 +282,7 @@ export default function Inventario() {
         </select>
         </div>
         <button type="submit" className="mt-4 bg-blue-500 text-white p-2 rounded">
-          Añadir Producto
+          {isEditing ? 'Actualizar Producto' : 'Añadir Producto'}
         </button>
       </form>
       <input
@@ -245,6 +308,8 @@ export default function Inventario() {
               <th onClick={() => handleSort('stock')} className="py-3 px-6 text-left cursor-pointer">Stock</th>
               <th onClick={() => handleSort('descripcion')} className="py-3 px-6 text-left cursor-pointer">Descripción</th>
               <th onClick={() => handleSort('proveedor')} className="py-3 px-6 text-left cursor-pointer">Proveedor</th>
+              <th  className="py-3 px-6 text-left cursor-pointer">Acciones</th>
+
             </tr>
           </thead>
           <tbody className="text-gray-600 text-sm font-light">
@@ -259,6 +324,10 @@ export default function Inventario() {
                 <td className="py-3 px-6 text-left">{item.stock}</td>
                 <td className="py-3 px-6 text-left">{item.descripcion}</td>
                 <td className="py-3 px-6 text-left">{item.proveedor}</td>
+                <td className="py-3 px-6 text-left">
+                  <button onClick={() => handleEditProduct(item)} className="text-blue-500">Editar</button>
+                  <button onClick={() => handleDeleteProduct(item.product_id)} className="text-red-500 ml-2">Eliminar</button>
+                </td>
               </tr>
             ))}
           </tbody>
