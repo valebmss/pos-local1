@@ -30,9 +30,9 @@ export default function Dashboard() {
     console.log("USER:", user);
   }, []);
 
-  if (!user) {
+  /*if (!user) {
     return <p>Vuelve a ingresar...</p>;
-  }
+  }*/
 
 
 

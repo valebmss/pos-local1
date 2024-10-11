@@ -1,7 +1,7 @@
 'use client';
 
 import ddbDocClient from "@/lib/aws";
-import { ScanCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
+import { ScanCommand, PutCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
 import { useEffect, useState } from 'react';
 
 const fetchProveedorData = async () => {
@@ -33,6 +33,23 @@ const addOrUpdateProveedor = async (newProveedor) => {
   }
 };
 
+const deleteProveedorFromDB = async (proveedor_id) => {
+  const params = {
+    TableName: 'Proveedor',
+    Key: {
+      proveedor_id: proveedor_id,
+    },
+  };
+
+  try {
+    await ddbDocClient.send(new DeleteCommand(params));
+    return true;
+  } catch (err) {
+    console.error('Error deleting proveedor:', err);
+    return false;
+  }
+};
+
 export default function Proveedor() {
   const [proveedores, setProveedores] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -41,8 +58,9 @@ export default function Proveedor() {
     nombre: '',
     tienda: '',
   });
-  const [editingProveedor, setEditingProveedor] = useState(null); // For editing
+  const [editingProveedor, setEditingProveedor] = useState(null); // Para editar
   const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null); // Para mensajes de éxito
 
   useEffect(() => {
     const fetchData = async () => {
@@ -65,23 +83,28 @@ export default function Proveedor() {
   const handleAddOrUpdateProveedor = async (e) => {
     e.preventDefault();
 
-    // Validation: Check for duplicate proveedor_id or nombre
+    // Validación: Verificar duplicados en proveedor_id y tienda
     const existingProveedor = proveedores.find(
       (prov) =>
         prov.proveedor_id === newProveedor.proveedor_id ||
-        prov.tienda === newProveedor.tienda
+        prov.tienda.toLowerCase() === newProveedor.tienda.toLowerCase()
     );
 
-    if (existingProveedor && (!editingProveedor || existingProveedor.proveedor_id !== editingProveedor.proveedor_id) && (!editingProveedor || existingProveedor.tienda !== editingProveedor.tienda)) {
+    if (
+      existingProveedor &&
+      (!editingProveedor ||
+        existingProveedor.proveedor_id !== editingProveedor.proveedor_id)
+    ) {
       setError('El proveedor con el mismo ID o tienda ya existe.');
+      setSuccess(null); // Limpiar mensajes de éxito
       return;
     }
 
-    const success = await addOrUpdateProveedor(newProveedor);
+    const successOperation = await addOrUpdateProveedor(newProveedor);
 
-    if (success) {
+    if (successOperation) {
       if (editingProveedor) {
-        // Update existing provider in the list
+        // Actualizar proveedor existente en la lista
         setProveedores((prev) =>
           prev.map((prov) =>
             prov.proveedor_id === editingProveedor.proveedor_id
@@ -89,10 +112,11 @@ export default function Proveedor() {
               : prov
           )
         );
-        setEditingProveedor(null);
+        setSuccess('Proveedor actualizado correctamente.');
       } else {
-        // Add new provider to the list
+        // Agregar nuevo proveedor a la lista
         setProveedores([...proveedores, newProveedor]);
+        setSuccess('Proveedor agregado correctamente.');
       }
 
       setNewProveedor({
@@ -100,14 +124,38 @@ export default function Proveedor() {
         nombre: '',
         tienda: '',
       });
+      setEditingProveedor(null);
+      setError(null); // Limpiar mensajes de error
     } else {
       setError('Error al guardar el proveedor.');
+      setSuccess(null); // Limpiar mensajes de éxito
     }
   };
 
   const handleEditProveedor = (proveedor) => {
     setNewProveedor(proveedor);
     setEditingProveedor(proveedor);
+    setError(null); // Limpiar mensajes de error
+    setSuccess(null); // Limpiar mensajes de éxito
+  };
+
+  const handleDeleteProveedor = async (proveedor_id) => {
+    const confirmDelete = window.confirm(
+      '¿Estás seguro de que deseas eliminar este proveedor?'
+    );
+    if (!confirmDelete) return;
+
+    const successDelete = await deleteProveedorFromDB(proveedor_id);
+    if (successDelete) {
+      setProveedores((prev) =>
+        prev.filter((prov) => prov.proveedor_id !== proveedor_id)
+      );
+      setSuccess('Proveedor eliminado correctamente.');
+      setError(null); // Limpiar mensajes de error
+    } else {
+      setError('Error al eliminar el proveedor.');
+      setSuccess(null); // Limpiar mensajes de éxito
+    }
   };
 
   return (
@@ -132,7 +180,7 @@ export default function Proveedor() {
               className="mt-1 p-2 w-full border border-gray-300 rounded"
               placeholder="Ingrese ID del proveedor"
               required
-              disabled={editingProveedor !== null} // Prevent changing ID during edit
+              disabled={editingProveedor !== null} // Evitar cambiar ID durante la edición
             />
           </div>
 
@@ -173,6 +221,8 @@ export default function Proveedor() {
             {editingProveedor ? 'Guardar Cambios' : 'Agregar Proveedor'}
           </button>
 
+          {/* Mensajes de Éxito y Error */}
+          {success && <p className="text-blue-500 mt-4">{success}</p>}
           {error && <p className="text-red-500 mt-4">{error}</p>}
         </form>
       </div>
@@ -196,16 +246,29 @@ export default function Proveedor() {
                   <td className="px-4 py-2">{proveedor.proveedor_id}</td>
                   <td className="px-4 py-2">{proveedor.nombre}</td>
                   <td className="px-4 py-2">{proveedor.tienda}</td>
-                  <td className="px-4 py-2">
+                  <td className="px-4 py-2 flex space-x-2">
                     <button
                       className="text-blue-500 hover:underline"
                       onClick={() => handleEditProveedor(proveedor)}
                     >
                       Editar
                     </button>
+                    <button
+                      className="text-red-500 hover:underline"
+                      onClick={() => handleDeleteProveedor(proveedor.proveedor_id)}
+                    >
+                      Eliminar
+                    </button>
                   </td>
                 </tr>
               ))}
+              {proveedores.length === 0 && (
+                <tr>
+                  <td colSpan="4" className="text-center py-4">
+                    No hay proveedores registrados.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
