@@ -2,9 +2,10 @@
 
 import ddbDocClient from "@/lib/aws";
 import { ScanCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
-import { useEffect, useState } from 'react';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+import { useEffect, useState, useRef  } from 'react';
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import { CSVLink } from "react-csv";
 
 
 const fetchInventoryData = async () => {
@@ -88,32 +89,44 @@ const updateProduct = async (product) => {
     return false;
   }
 };
-const generatePDF = async () => {
-  const input = document.getElementById('inventory-table');
-  
-  const canvas = await html2canvas(input);
-  const imgData = canvas.toDataURL('image/png');
-  
-  const pdf = new jsPDF();
-  const imgWidth = 190; // Ajusta el ancho según sea necesario
-  const pageHeight = pdf.internal.pageSize.height;
-  const imgHeight = (canvas.height * imgWidth) / canvas.width;
-  let heightLeft = imgHeight;
+const downloadPDF = (inventoryItems) => {
+  const doc = new jsPDF();
 
-  let position = 0;
+  doc.text("Inventario de Productos", 14, 16);
+  autoTable(doc, {
+    startY: 20,
+    head: [
+      [
+        "Product ID",
+        "Nombre",
+        "Categoría",
+        "Precio Venta",
+        "Precio Costo",
+        "Stock",
+        "Descripción",
+        "Proveedor"
+      ]
+    ],
+    body: inventoryItems.map(item => [
+      item.product_id,
+      item.nombre,
+      item.categoria,
+      formatPrice(item.precio_venta),
+      formatPrice(item.precio_costo),
+      item.stock,
+      item.descripcion,
+      item.proveedor
+    ]),
+  });
 
-  pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-  heightLeft -= pageHeight;
-
-  while (heightLeft >= 0) {
-    position = heightLeft - imgHeight;
-    pdf.addPage();
-    pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
-  }
-
-  pdf.save('inventario.pdf');
+  doc.save("inventario.pdf");
 };
+
+const downloadCSV = (csvLinkRef) => {
+  csvLinkRef.current.link.click();
+};
+
+
 
 export default function Inventario() {
   const [inventoryItems, setInventoryItems] = useState([]);
@@ -130,6 +143,10 @@ export default function Inventario() {
     descripcion: '',
     proveedor: ''
   });
+  const csvLinkRef = useRef(); // CSV link ref
+
+
+  
 
   const [searchTerm, setSearchTerm] = useState(''); // Para el buscador
   const [isEditing, setIsEditing] = useState(false);
@@ -137,6 +154,28 @@ export default function Inventario() {
 
   const [sortColumn, setSortColumn] = useState(null); // Columna para ordenar
   const [sortOrder, setSortOrder] = useState('asc'); // Orden ascendente o descendente
+  const csvData = [
+    [
+      "Product ID",
+      "Nombre",
+      "Categoría",
+      "Precio Venta",
+      "Precio Costo",
+      "Stock",
+      "Descripción",
+      "Proveedor"
+    ],
+    ...inventoryItems.map(item => [
+      item.product_id,
+      item.nombre,
+      item.categoria,
+      item.precio_venta,
+      item.precio_costo,
+      item.stock,
+      item.descripcion,
+      item.proveedor
+    ])
+  ];
 
   useEffect(() => {
     const fetchData = async () => {
@@ -238,15 +277,22 @@ export default function Inventario() {
       <h1 className="text-3xl font-bold mb-4">Inventario</h1>
 
       {/* Buscador */}
-      <button 
-  onClick={generatePDF} 
-  className="mt-4 bg-green-500 text-white p-2 rounded"
->
+      <button onClick={() => downloadPDF(inventoryItems)} className="mt-4 bg-green-500 text-white p-2 rounded">
   Descargar PDF
 </button>
 
+<button onClick={() => downloadCSV(csvLinkRef)} className="mt-4 bg-yellow-500 text-white p-2 rounded ml-2">
+  Descargar CSV
+</button>
+<CSVLink
+  data={csvData}
+  filename="inventario.csv"
+  ref={csvLinkRef}
+  style={{ display: 'none' }}
+/>
+
       {/* Formulario para añadir un nuevo producto */}
-      <form onSubmit={handleAddOrUpdateProduct} className="mb-4">
+      <form onSubmit={handleAddOrUpdateProduct} className="mb-4 mt-4">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <input
             type="number"
