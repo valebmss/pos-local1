@@ -467,7 +467,6 @@ const uniqueColors = Array.from(colors); // Si también quieres incluir colores
       value={newProduct.proveedor}
       onChange={handleInputChange}
       className="p-1 border border-gray-300 rounded "
-      required
     >
       <option value="">Seleccione</option>
       {proveedores.map((proveedor, index) => (
