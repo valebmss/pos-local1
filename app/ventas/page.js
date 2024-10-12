@@ -43,6 +43,8 @@ export default function PanelVentas() {
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
+  const [cliente, setCliente] = useState('');
+  const [metodoPago, setMetodoPago] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -55,7 +57,6 @@ export default function PanelVentas() {
   }, []);
 
   const handleAddToCart = (producto) => {
-    // Permitir agregar al carrito incluso si el stock es 0
     setCarrito((prev) => {
       const existingProduct = prev.find((p) => p.product_id === producto.product_id);
       if (existingProduct) {
@@ -90,7 +91,6 @@ export default function PanelVentas() {
     setCarrito([]);
     setTotal(0);
     window.location.reload();
-
   };
 
   useEffect(() => {
@@ -104,103 +104,125 @@ export default function PanelVentas() {
   );
 
   return (
-    <div className="container mx-auto py-8">
-      <h1 className="text-3xl font-bold mb-8 text-center">Panel de Ventas</h1>
+    <div className="container mx-auto py-8 flex flex-col md:flex-row">
 
-      <input
-        type="text"
-        placeholder="Buscar productos..."
-        className="mb-4 p-2 border rounded w-full"
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-      />
+      {/* Sección de Productos */}
+      <div className="w-full md:w-3/5 mb-6">
+        <h1 className="text-3xl font-bold mb-8 text-center">Panel de Ventas</h1>
 
-      {/* Sección de productos */}
-      <div className="bg-white shadow-md rounded-lg p-6 mb-8">
-        <h2 className="text-2xl font-semibold mb-4">Productos Disponibles</h2>
-        {loading ? (
-          <p className="text-center">Cargando productos...</p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            {filteredProductos.map((producto) => (
-              <div 
-                key={producto.product_id} 
-                className={`border p-4 rounded shadow ${producto.stock < 10 ? 'bg-red-100' : ''}`}
-              >
-                <h3 className="font-bold">{producto.nombre}</h3>
-                <p>Precio: ${producto.precio_venta}</p>
-                <p>
-                  Stock: { producto.stock}
-                </p>
-                <button
-                  className="mt-2 bg-blue-500 text-white py-1 px-3 rounded"
-                  onClick={() => handleAddToCart(producto)}
+        <input
+          type="text"
+          placeholder="Buscar productos..."
+          className="mb-4 p-2 border rounded w-10/12 ml-12"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+
+        <div className="bg-white shadow-md rounded-lg p-6">
+          <h2 className="text-2xl font-semibold mb-4">Productos Disponibles</h2>
+          {loading ? (
+            <p className="text-center">Cargando productos...</p>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {filteredProductos.map((producto) => (
+                <div 
+                  key={producto.product_id} 
+                  className={`border p-4 rounded shadow ${producto.stock < 10 ? 'bg-red-100' : ''}`}
                 >
-                  Agregar al Carrito
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+                  <h3 className="font-bold">{producto.nombre}</h3>
+                  <p>Precio: ${producto.precio_venta}</p>
+                  <p>Stock: {producto.stock}</p>
+                  <button
+                    className="mt-2 bg-blue-500 text-white py-1 px-3 rounded"
+                    onClick={() => handleAddToCart(producto)}
+                  >
+                    Agregar al Carrito
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Sección de carrito */}
-      <div className="bg-gray-100 rounded-lg p-6 shadow-md">
-  <h2 className="text-2xl font-semibold mb-4 text-center">Carrito de Compras</h2>
-  {carrito.length === 0 ? (
-    <p className="text-center">No hay productos en el carrito.</p>
-  ) : (
-    <div className="overflow-x-auto">
-      <table className="min-w-full bg-white border border-gray-300">
-        <thead className="bg-gray-200">
-          <tr>
-            <th className="py-2 px-4 border-b text-left">Producto</th>
-            <th className="py-2 px-4 border-b text-left">Cantidad</th>
-            <th className="py-2 px-4 border-b text-left">Precio Unitario</th>
-            <th className="py-2 px-4 border-b text-left">Subtotal</th>
-            <th className="py-2 px-4 border-b text-left">Acciones</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-300">
-          {carrito.map((item) => (
-            <tr key={item.product_id} className="hover:bg-gray-100 transition duration-200">
-              <td className="py-4 px-4">{item.nombre}</td>
-              <td className="py-4 px-4">
-                <input
-                  type="number"
-                  min="1"
-                  value={item.quantity}
-                  className="w-16 border rounded p-1 text-center"
-                  onChange={(e) => handleQuantityChange(item.product_id, Number(e.target.value))}
-                />
-              </td>
-              <td className="py-4 px-4">${item.precio_venta}</td>
-              <td className="py-4 px-4 font-semibold">
-                ${item.precio_venta * item.quantity}
-              </td>
-              <td className="py-4 px-4">
-                <button
-                  className="text-red-500 hover:text-red-700 transition duration-200"
-                  onClick={() => handleRemoveFromCart(item.product_id)}
-                >
-                  Eliminar
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <h3 className="font-bold text-xl mt-4 text-right">Total: ${total}</h3>
-      <button
-        className="mt-6 bg-green-500 hover:bg-green-600 text-white py-2 px-6 rounded transition duration-200"
-        onClick={handleCheckout}
-      >
-        Finalizar Compra
-      </button>
-    </div>
-  )}
-</div>
+      {/* Sección de Carrito y Método de Pago */}
+      <div className="w-full md:w-2/5 p-4">
+        <div className="bg-gray-100 rounded-lg p-6 shadow-md mb-4">
+          <h2 className="text-2xl font-semibold mb-4 text-center">Carrito de Compras</h2>
+          {carrito.length === 0 ? (
+            <p className="text-center">No hay productos en el carrito.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-white border border-gray-300">
+                <thead className="bg-gray-200">
+                  <tr>
+                    <th className="py-2 px-4 border-b text-left">Producto</th>
+                    <th className="py-2 px-4 border-b text-left">Cantidad</th>
+                    <th className="py-2 px-4 border-b text-left">Precio Unitario</th>
+                    <th className="py-2 px-4 border-b text-left">Subtotal</th>
+                    <th className="py-2 px-4 border-b text-left">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-300">
+                  {carrito.map((item) => (
+                    <tr key={item.product_id} className="hover:bg-gray-100 transition duration-200">
+                      <td className="py-4 px-4">{item.nombre}</td>
+                      <td className="py-4 px-4">
+                        <input
+                          type="number"
+                          min="1"
+                          value={item.quantity}
+                          className="w-16 border rounded p-1 text-center"
+                          onChange={(e) => handleQuantityChange(item.product_id, Number(e.target.value))}
+                        />
+                      </td>
+                      <td className="py-4 px-4">${item.precio_venta}</td>
+                      <td className="py-4 px-4 font-semibold">${item.precio_venta * item.quantity}</td>
+                      <td className="py-4 px-4">
+                        <button
+                          className="text-red-500 hover:text-red-700 transition duration-200"
+                          onClick={() => handleRemoveFromCart(item.product_id)}
+                        >
+                          Eliminar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <h3 className="font-bold text-xl mt-4 text-right">Total: ${total}</h3>
+            </div>
+          )}
+        </div>
 
+        {/* Método de Pago y Cliente */}
+        <div className="bg-white rounded-lg p-6 shadow-md">
+          <h2 className="text-2xl font-semibold mb-4 text-center">Método de Pago</h2>
+          <input
+            type="text"
+            placeholder="Nombre del Cliente"
+            value={cliente}
+            onChange={(e) => setCliente(e.target.value)}
+            className="mb-4 p-2 border rounded w-full"
+          />
+          <select
+            value={metodoPago}
+            onChange={(e) => setMetodoPago(e.target.value)}
+            className="mb-4 p-2 border rounded w-full"
+          >
+            <option value="">Seleccionar Método de Pago</option>
+            <option value="tarjeta">Tarjeta de Crédito</option>
+            <option value="efectivo">Efectivo</option>
+            <option value="transferencia">Transferencia Bancaria</option>
+          </select>
+          <button
+            className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded transition duration-200"
+            onClick={handleCheckout}
+          >
+            Finalizar Compra
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
