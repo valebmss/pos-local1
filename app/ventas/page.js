@@ -121,7 +121,7 @@ export default function PanelVentas() {
         {loading ? (
           <p className="text-center">Cargando productos...</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
             {filteredProductos.map((producto) => (
               <div 
                 key={producto.product_id} 
