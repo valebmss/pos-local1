@@ -1,7 +1,7 @@
 'use client';
 
+import { ScanCommand, UpdateCommand, GetCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
 import ddbDocClient from "@/lib/aws";
-import { ScanCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { useEffect, useState } from 'react';
 
 const fetchInventoryData = async () => {
@@ -18,26 +18,9 @@ const fetchInventoryData = async () => {
   }
 };
 
-const updateProductStock = async (productId, newStock) => {
-  const params = {
-    TableName: 'Inventario',
-    Key: { product_id: productId },
-    UpdateExpression: 'set stock = :s',
-    ExpressionAttributeValues: {
-      ':s': newStock,
-    },
-  };
-
-  try {
-    await ddbDocClient.send(new UpdateCommand(params));
-    return true;
-  } catch (err) {
-    console.error('Error updating stock:', err);
-    return false;
-  }
-};
-
 export default function PanelVentas() {
+  const [ventaItems, setVentaItems] = useState([]);
+ 
   const [productos, setProductos] = useState([]);
   const [carrito, setCarrito] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -45,6 +28,10 @@ export default function PanelVentas() {
   const [searchTerm, setSearchTerm] = useState('');
   const [cliente, setCliente] = useState('');
   const [metodoPago, setMetodoPago] = useState('');
+  const [clienteIdInput, setClienteIdInput] = useState('');
+  const [selectedCliente, setSelectedCliente] = useState('');
+
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -69,7 +56,7 @@ export default function PanelVentas() {
       return [...prev, { ...producto, quantity: 1 }];
     });
   };
-
+ 
   const handleRemoveFromCart = (productoId) => {
     setCarrito((prev) => prev.filter((p) => p.product_id !== productoId));
   };
@@ -82,16 +69,44 @@ export default function PanelVentas() {
     );
   };
 
-  const handleCheckout = async () => {
-    for (const item of carrito) {
-      const newStock = item.stock - item.quantity;
-      await updateProductStock(item.product_id, newStock);
+
+  const handleClienteIdKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      buscarClientePorId();
     }
-    alert('Venta completada. ¡Gracias por su compra!');
-    setCarrito([]);
-    setTotal(0);
-    window.location.reload();
   };
+  
+  const buscarClientePorId = async () => {
+    if (!clienteIdInput.trim()) return;
+  
+    const params = {
+      TableName: 'Cliente',
+      Key: {
+        cliente_id: clienteIdInput.trim(),
+      },
+    };
+
+    console.log("Region:", process.env.NEXT_PUBLIC_AWS_REGION);
+console.log("Access Key:", process.env.NEXT_PUBLIC_AWS_ACCESS_KEY_ID);
+console.log("Secret Key:", process.env.NEXT_PUBLIC_AWS_SECRET_ACCESS_KEY);
+
+  
+    try {
+      const data = await ddbDocClient.send(new GetCommand(params));
+      const clienteDefault = "No definido";
+
+      if (data.Item) {
+        console.log("Cliente input")
+        setSelectedCliente(data.Item.nombre);
+      } else {
+        console.log("No encontrado")
+        setSelectedCliente(clienteDefault);
+      }
+    } catch (err) {
+      console.error('Error al buscar cliente por cliente_id:', err);
+    }
+  };
+  
 
   useEffect(() => {
     const totalAmount = carrito.reduce((acc, item) => acc + item.precio_venta * item.quantity, 0);
@@ -103,6 +118,71 @@ export default function PanelVentas() {
     producto.product_id.toString().includes(searchTerm)
   );
 
+  const finalizarVenta = async () => {
+    const ventaData = {
+      TableName: 'Ventas',
+      Item: {
+        venta_id: new Date().getTime().toString(),
+        fecha: new Date().toISOString().split('T')[0],
+        monto_total: total,
+        metodo_pago: metodoPago,
+        cliente: selectedCliente,
+        item: carrito.map(item => ({
+          Product_id: item.product_id,
+          Producto: item.nombre,
+          Cantidad: item.quantity,
+          monto_unitario: item.precio_venta,
+          monto: item.precio_venta * item.quantity,
+        })),
+      },
+    };
+  
+    try {
+      await ddbDocClient.send(new PutCommand(ventaData));
+      console.log('Venta guardada exitosamente en DynamoDB');
+      await actualizarInventario(carrito);
+      setCarrito([]);
+    } catch (err) {
+      console.error('Error al guardar la venta en DynamoDB:', err);
+    }
+  };
+  
+  const verificarVenta = async (venta_id) => {
+    const params = {
+      TableName: 'Ventas',
+      Key: { venta_id },
+    };
+  
+    try {
+      const data = await dynamoDb.get(params).promise();
+      console.log('Verificación de venta en DynamoDB:', data);
+    } catch (err) {
+      console.error('Error al verificar venta:', err);
+    }
+  }
+
+
+  const actualizarInventario = async (itemsVendidos) => {
+    for (const item of itemsVendidos) {
+      const params = {
+        TableName: 'Inventario',
+        Key: { product_id: item.product_id },  // Usar el ID único
+        UpdateExpression: 'SET stock = stock - :cantidadVendida',
+        ExpressionAttributeValues: { ':cantidadVendida': item.quantity },
+        ConditionExpression: 'stock >= :cantidadVendida',  // Asegura que haya suficiente stock
+      };
+  
+      try {
+        await ddbDocClient.send(new UpdateCommand(params));
+        console.log(`Stock actualizado para el producto ${item.nombre}`);
+      } catch (err) {
+        console.error(`Error al actualizar el stock del producto ${item.nombre}:`, err);
+        alert(`Error al actualizar el stock del producto ${item.nombre}`);
+      }
+    }
+  };
+  
+  
   return (
     <div className="container mx-auto py-8 flex flex-col md:flex-row">
 
@@ -198,26 +278,43 @@ export default function PanelVentas() {
         {/* Método de Pago y Cliente */}
         <div className="bg-white rounded-lg p-6 shadow-md">
           <h2 className="text-2xl font-semibold mb-4 text-center">Método de Pago</h2>
-          <input
-            type="text"
-            placeholder="Nombre del Cliente"
-            value={cliente}
-            onChange={(e) => setCliente(e.target.value)}
-            className="mb-4 p-2 border rounded w-full"
-          />
+          <div className="mb-6">
+              <label className="block text-gray-700 text-sm font-bold mb-2">
+                Cliente (ID)
+              </label>
+              <input
+                className="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                value={clienteIdInput}
+                onChange={(e) => setClienteIdInput(e.target.value)}
+                onKeyPress={handleClienteIdKeyPress}
+              />
+                          <div className="mb-6">
+              <label className="block text-gray-700 text-sm font-bold mb-2">
+                Cliente Seleccionado
+              </label>
+              <input
+                className="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                value={selectedCliente}
+                readOnly
+              />
+            </div>
+            </div>
           <select
             value={metodoPago}
             onChange={(e) => setMetodoPago(e.target.value)}
             className="mb-4 p-2 border rounded w-full"
           >
             <option value="">Seleccionar Método de Pago</option>
-            <option value="tarjeta">Tarjeta de Crédito</option>
             <option value="efectivo">Efectivo</option>
-            <option value="transferencia">Transferencia Bancaria</option>
+            <option value="tarjeta">Tarjeta</option>
+            <option value="transferencia">Nequi</option>
+            <option value="transferencia">Daviplata</option>
+            <option value="transferencia">Addi</option>
+            <option value="transferencia">Sistecredito</option>
           </select>
           <button
             className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded transition duration-200"
-            onClick={handleCheckout}
+            onClick={finalizarVenta}
           >
             Finalizar Compra
           </button>
