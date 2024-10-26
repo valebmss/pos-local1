@@ -2,148 +2,230 @@
 
 import React, { useState } from 'react';
 import DatePicker from 'react-datepicker';
+import { format } from 'date-fns';
+import jsPDF from 'jspdf';
 import 'react-datepicker/dist/react-datepicker.css';
-import { generateCSV, generatePDF } from '@/lib/reports'; // Importamos las funciones para generar CSV y PDF
-import { addDays, addWeeks, addMonths, addYears } from 'date-fns'; // Para manipular fechas fácilmente
+import 'jspdf-autotable';
+
 
 const ReportsPage = () => {
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [reportData, setReportData] = useState([]); // Inicializamos reportData como un array vacío
+  const [loading, setLoading] = useState(false); // Estado de carga
+  const [reportType, setReportType] = useState('day');
+  const [salesData, setSalesData] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [expandedVenta, setExpandedVenta] = useState(null); // Estado para manejar qué venta está expandida
+
+
+
+
 
   const fetchReport = async () => {
-    if (startDate && endDate) {
-      console.log('Consultando reporte de ventas...');
-      try {
-        // Formatear las fechas para obtener solo el día (YYYY-MM-DD)
-        const formattedStartDate = startDate.toISOString().split('T')[0];
-        const formattedEndDate = endDate.toISOString().split('T')[0];
+    let url = '';
+    if (reportType === 'day') {
+      const formattedDate = format(startDate, 'yyyy-MM-dd');
+      url = `/api/ventas?fecha=${formattedDate}`;
+      console.log('url',  url);
+    } else if (reportType === 'month') {
+      const year = format(startDate, 'yyyy');
+      const month = format(startDate, 'MM');
+      url = `/api/ventas?anio=${year}&mes=${month}`;
+      console.log('url',  url);
+    } else if (reportType === 'year') {
+      const year = format(startDate, 'yyyy');
+      url = `/api/ventas?anio=${year}`;
+      console.log('url',  url);
 
-        console.log("startDate", formattedStartDate);
-        console.log("endDate", formattedEndDate);
-        const response = await fetch(`/api/reports?startDate=${formattedStartDate}&endDate=${formattedEndDate}`);
-        if (!response.ok) {
-          throw new Error(`Error en la solicitud: ${response.statusText}`);
-        }
-        const data = await response.json();
-        setReportData(data.ventas || []); // Aseguramos que siempre sea un array
-      } catch (error) {
-        console.log('Error en la solicitud:', error);
-        console.error('Error en la solicitud:', error);
-      }
+    } else if (reportType === 'range') {
+      const start = format(startDate, 'yyyy-MM-dd');
+      const end = format(endDate, 'yyyy-MM-dd');
+      url = `/api/ventas?fechaInicio=${start}&fechaFin=${end}`;
+      console.log('url',  url);
+
+    }
+
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      const formattedTotal = data.total ? data.total.toLocaleString() : '0';
+      console.log('data',  data);
+      setSalesData(data.ventas || []);
+      console.log('data.ventas',  data.ventas);
+      setTotal(formattedTotal);
+    } catch (error) {
+      console.error('Error fetching sales data:', error);
+      setSalesData([]);
+      setTotal(0);
+    }
+  };
+  const toggleVenta = (index) => {
+    if (expandedVenta === index) {
+      setExpandedVenta(null); // Cierra la venta si está abierta
+    } else {
+      setExpandedVenta(index); // Expande la venta
     }
   };
 
-  // Funciones para rangos de tiempo rápidos
-  const setQuickRange = (rangeType) => {
-    const today = new Date();
-    switch (rangeType) {
-      case '1d':
-        setStartDate(today);
-        setEndDate(today);
-        break;
-      case '1w':
-        setStartDate(addDays(today, -7));
-        setEndDate(today);
-        break;
-      case '1m':
-        setStartDate(addMonths(today, -1));
-        setEndDate(today);
-        break;
-      case '1y':
-        setStartDate(addYears(today, -1));
-        setEndDate(today);
-        break;
-      default:
-        break;
-    }
+  const generatePDF = () => {
+    const doc = new jsPDF();
+    let startY = 26; // Inicializa startY aquí
+
+    doc.text('Reporte de Ventas', 14, 16);
+  
+    console.log("salesData", salesData);
+    
+    salesData.forEach((venta, index) => {
+      // Información de la venta principal
+      const mainVentaData = [
+        [`Venta #${index + 1}`, '', ''], // Título de la venta
+        ['Fecha:', venta.fecha, ''], // Fecha de la venta
+        ['Método de Pago:', venta.metodo_pago, ''], // Método de pago de la venta
+        ['Monto Total:', `$${venta.monto_total}`, ''], // Monto total de la venta
+      ];
+      
+      console.log("venta.items", venta.item);
+      console.log("venta.array", Array.isArray(venta.item));
+      // Productos de la venta
+      if (venta.item && Array.isArray(venta.item)) {
+        // Productos de la venta
+        const productosData = venta.item.map(item => [
+          item.Producto || '', // Nombre del producto (manejar si es undefined)
+          item.Cantidad || 0, // Cantidad del producto (manejar si es undefined)
+          `$${item.monto || 0}`, // Total del producto (manejar si es undefined)
+        ]);
+        doc.autoTable({
+          head: [['Producto', 'Cantidad', 'Total']],
+          body: productosData,
+          startY: startY, // Usar el startY actual para la tabla de productos
+        });
+  
+        // Incrementar startY para la próxima tabla principal
+        startY = doc.autoTable.previous.finalY + 10;
+  
+      } else {
+        // En caso de que no haya items, mostrar un mensaje o manejar el caso según necesidad
+        console.log(`No hay productos para la venta #${index + 1}`);
+      }
+  
+      // Añadir tabla principal de la venta
+      doc.autoTable({
+        head: [],
+        body: mainVentaData,
+        startY: index === 0 ? 26 : doc.autoTable.previous.finalY + 10,
+      });
+      });
+  
+    doc.save('reporte_de_ventas.pdf');
   };
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Reporte de Ventas</h1>
-
+    <div className="max-w-3xl mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
+      <h1 className="text-2xl font-bold mb-4">Generar Reporte de Ventas</h1>
       <div className="mb-4">
-        <label className="block text-lg mb-2">Selecciona el rango de fechas:</label>
-        <div className="flex items-center mb-4">
-          <DatePicker
-            selected={startDate}
-            onChange={(date) => setStartDate(date)}
-            selectsStart
-            startDate={startDate}
-            endDate={endDate}
-            placeholderText="Fecha de inicio"
-            className="mr-2 border p-2"
-          />
-          <DatePicker
-            selected={endDate}
-            onChange={(date) => setEndDate(date)}
-            selectsEnd
-            startDate={startDate}
-            endDate={endDate}
-            minDate={startDate}
-            placeholderText="Fecha de fin"
-            className="border p-2"
-          />
-        </div>
-
-        {/* Botones de rango rápido */}
-        <div className="flex space-x-4 mb-4">
-          <button onClick={() => setQuickRange('1d')} className="bg-gray-500 text-white py-2 px-4 rounded">
-            1 Día
-          </button>
-          <button onClick={() => setQuickRange('1w')} className="bg-gray-500 text-white py-2 px-4 rounded">
-            1 Semana
-          </button>
-          <button onClick={() => setQuickRange('1m')} className="bg-gray-500 text-white py-2 px-4 rounded">
-            1 Mes
-          </button>
-          <button onClick={() => setQuickRange('1y')} className="bg-gray-500 text-white py-2 px-4 rounded">
-            1 Año
-          </button>
-        </div>
+        <label className="block mb-2">
+          Tipo de Reporte:
+          <select
+            className="ml-2 p-2 border border-gray-300 rounded"
+            value={reportType}
+            onChange={(e) => setReportType(e.target.value)}
+          >
+            <option value="day">Día</option>
+            <option value="month">Mes</option>
+            <option value="year">Año</option>
+            <option value="range">Rango de Fechas</option>
+          </select>
+        </label>
       </div>
-
-      <button onClick={fetchReport} className="bg-blue-500 text-white py-2 px-4 rounded">
-        Generar Reporte
-      </button>
-
-      {reportData.length > 0 && (
-        <div className="mt-6">
-          <h2 className="text-xl font-bold mb-4">Resultados del Reporte</h2>
-          <table className="table-auto w-full">
-            <thead>
-              <tr>
-                <th className="px-4 py-2">Fecha</th>
-                <th className="px-4 py-2">Producto</th>
-                <th className="px-4 py-2">Cantidad</th>
-                <th className="px-4 py-2">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {reportData.map((venta, index) => (
-                <tr key={index}>
-                  <td className="border px-4 py-2">{venta.fecha}</td>
-                  <td className="border px-4 py-2">{venta.producto}</td>
-                  <td className="border px-4 py-2">{venta.cantidad}</td>
-                  <td className="border px-4 py-2">${venta.total}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          <div className="mt-4">
-            <button onClick={() => generateCSV(reportData)} className="bg-green-500 text-white py-2 px-4 rounded">
-              Descargar CSV
-            </button>
-            <button onClick={() => generatePDF(reportData)} className="bg-red-500 text-white py-2 px-4 rounded ml-4">
-              Descargar PDF
-            </button>
-          </div>
+      {reportType === 'range' ? (
+        <div className="mb-4">
+          <label className="block mb-2">
+            Fecha Inicio:
+            <DatePicker
+              selected={startDate}
+              onChange={(date) => setStartDate(date)}
+              selectsStart
+              startDate={startDate}
+              endDate={endDate}
+              dateFormat="yyyy-MM-dd"
+              className="ml-2 p-2 border border-gray-300 rounded"
+            />
+          </label>
+          <label className="block mb-2">
+            Fecha Fin:
+            <DatePicker
+              selected={endDate}
+              onChange={(date) => setEndDate(date)}
+              selectsEnd
+              startDate={startDate}
+              endDate={endDate}
+              minDate={startDate}
+              dateFormat="yyyy-MM-dd"
+              className="ml-2 p-2 border border-gray-300 rounded"
+            />
+          </label>
+        </div>
+      ) : (
+        <div className="mb-4">
+          <label className="block mb-2">
+            Fecha:
+            <DatePicker
+              selected={startDate}
+              onChange={(date) => setStartDate(date)}
+              showMonthYearPicker={reportType === 'month'}
+              showYearPicker={reportType === 'year'}
+              dateFormat={reportType === 'day' ? "yyyy-MM-dd" : reportType === 'month' ? "yyyy-MM" : "yyyy"}
+              className="ml-2 p-2 border border-gray-300 rounded"
+            />
+          </label>
         </div>
       )}
+      <button
+        className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded mr-2"
+        onClick={fetchReport}
+        disabled={!startDate || (reportType === 'range' && !endDate)}
+      >
+        Consultar
+      </button>
+      <button
+        className={`bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded ${!salesData.length && 'opacity-50 cursor-not-allowed'}`}
+        onClick={generatePDF}
+        disabled={!salesData.length}
+      >
+        Descargar PDF
+      </button>
+      <div className="mt-4">
+        <h2 className="text-lg font-bold">Total: ${total}</h2>
+        <ul className="mt-4 divide-y divide-gray-200">
+          {salesData.map((venta, index) => (
+            <li key={index} className="py-2">
+              <div
+                className="flex justify-between items-center cursor-pointer"
+                onClick={() => toggleVenta(index)}
+              >
+                <div className="text-gray-800">{venta.fecha}</div>
+                <div className="text-gray-600">${venta.monto_total}</div>
+              </div>
+              {expandedVenta === index && (
+                <ul className="mt-2 pl-4">
+                  {venta.item.map((item, idx) => (
+                    <li key={idx} className="py-1">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-800">{item.Producto}</span>
+                        <span className="text-gray-600">
+                          ${item.monto} (Cantidad: {item.Cantidad})
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 };
-
 export default ReportsPage;

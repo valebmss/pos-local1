@@ -19,8 +19,8 @@ const fetchInventoryData = async () => {
 };
 
 export default function PanelVentas() {
-  const [ventaItems, setVentaItems] = useState([]);
- 
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [productos, setProductos] = useState([]);
   const [carrito, setCarrito] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -30,8 +30,7 @@ export default function PanelVentas() {
   const [metodoPago, setMetodoPago] = useState('');
   const [clienteIdInput, setClienteIdInput] = useState('');
   const [selectedCliente, setSelectedCliente] = useState('');
-
-
+  const clienteDefault = "No definido";
 
   useEffect(() => {
     const fetchData = async () => {
@@ -56,7 +55,7 @@ export default function PanelVentas() {
       return [...prev, { ...producto, quantity: 1 }];
     });
   };
- 
+
   const handleRemoveFromCart = (productoId) => {
     setCarrito((prev) => prev.filter((p) => p.product_id !== productoId));
   };
@@ -69,44 +68,60 @@ export default function PanelVentas() {
     );
   };
 
-
   const handleClienteIdKeyPress = (e) => {
     if (e.key === 'Enter') {
       buscarClientePorId();
     }
   };
-  
-  const buscarClientePorId = async () => {
-    if (!clienteIdInput.trim()) return;
-  
+
+  const handleProductIdKeyPress = async (e) => {
+    if (e.key === 'Enter') {
+      await buscarProductoPorId();
+    }
+  };
+
+  const buscarProductoPorId = async () => {
+    if (!searchTerm.trim()) return;
+
     const params = {
-      TableName: 'Cliente',
+      TableName: 'Inventario',
+      Key: {
+        product_id: searchTerm.trim(),
+      },
+    };
+
+    try {
+      const data = await ddbDocClient.send(new GetCommand(params));
+      if (data.Item) {
+        handleAddToCart(data.Item);
+        setSearchTerm('');
+      } else {
+        console.log("Producto no encontrado");
+      }
+    } catch (err) {
+      console.error('Error al buscar producto por product_id:', err);
+    }
+  };
+
+  const buscarClientePorId = async () => {
+    const params = {
+      TableName: 'Clientes',
       Key: {
         cliente_id: clienteIdInput.trim(),
       },
     };
 
-    console.log("Region:", process.env.NEXT_PUBLIC_AWS_REGION);
-console.log("Access Key:", process.env.NEXT_PUBLIC_AWS_ACCESS_KEY_ID);
-console.log("Secret Key:", process.env.NEXT_PUBLIC_AWS_SECRET_ACCESS_KEY);
-
-  
     try {
       const data = await ddbDocClient.send(new GetCommand(params));
-      const clienteDefault = "No definido";
-
       if (data.Item) {
-        console.log("Cliente input")
         setSelectedCliente(data.Item.nombre);
       } else {
-        console.log("No encontrado")
         setSelectedCliente(clienteDefault);
       }
     } catch (err) {
       console.error('Error al buscar cliente por cliente_id:', err);
     }
   };
-  
 
   useEffect(() => {
     const totalAmount = carrito.reduce((acc, item) => acc + item.precio_venta * item.quantity, 0);
@@ -114,11 +129,24 @@ console.log("Secret Key:", process.env.NEXT_PUBLIC_AWS_SECRET_ACCESS_KEY);
   }, [carrito]);
 
   const filteredProductos = productos.filter(producto =>
-    producto.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    producto.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
     producto.product_id.toString().includes(searchTerm)
   );
 
   const finalizarVenta = async () => {
+    setError("");
+    setSuccess("");
+
+    if (!metodoPago) {
+      setError("El medio de pago es obligatorio.");
+      return;
+    }
+
+    if (!carrito || carrito.length === 0) {
+      setError("Debe haber al menos un artículo en la venta.");
+      return;
+    }
+
     const ventaData = {
       TableName: 'Ventas',
       Item: {
@@ -136,60 +164,40 @@ console.log("Secret Key:", process.env.NEXT_PUBLIC_AWS_SECRET_ACCESS_KEY);
         })),
       },
     };
-  
+
     try {
       await ddbDocClient.send(new PutCommand(ventaData));
-      console.log('Venta guardada exitosamente en DynamoDB');
       await actualizarInventario(carrito);
+      setSuccess("Venta guardada exitosamente.");
       setCarrito([]);
     } catch (err) {
+      setError("Error al guardar la venta en DynamoDB.");
       console.error('Error al guardar la venta en DynamoDB:', err);
     }
   };
-  
-  const verificarVenta = async (venta_id) => {
-    const params = {
-      TableName: 'Ventas',
-      Key: { venta_id },
-    };
-  
-    try {
-      const data = await dynamoDb.get(params).promise();
-      console.log('Verificación de venta en DynamoDB:', data);
-    } catch (err) {
-      console.error('Error al verificar venta:', err);
-    }
-  }
-
 
   const actualizarInventario = async (itemsVendidos) => {
     for (const item of itemsVendidos) {
       const params = {
         TableName: 'Inventario',
-        Key: { product_id: item.product_id },  // Usar el ID único
+        Key: { product_id: item.product_id },
         UpdateExpression: 'SET stock = stock - :cantidadVendida',
         ExpressionAttributeValues: { ':cantidadVendida': item.quantity },
-        ConditionExpression: 'stock >= :cantidadVendida',  // Asegura que haya suficiente stock
+        ConditionExpression: 'stock >= :cantidadVendida',
       };
-  
+
       try {
         await ddbDocClient.send(new UpdateCommand(params));
-        console.log(`Stock actualizado para el producto ${item.nombre}`);
       } catch (err) {
         console.error(`Error al actualizar el stock del producto ${item.nombre}:`, err);
-        alert(`Error al actualizar el stock del producto ${item.nombre}`);
       }
     }
   };
-  
-  
+
   return (
     <div className="container mx-auto py-8 flex flex-col md:flex-row">
-
-      {/* Sección de Productos */}
       <div className="w-full md:w-3/5 mb-6">
         <h1 className="text-3xl font-bold mb-8 text-center">Panel de Ventas</h1>
-
         <input
           type="text"
           placeholder="Buscar productos..."
@@ -197,7 +205,6 @@ console.log("Secret Key:", process.env.NEXT_PUBLIC_AWS_SECRET_ACCESS_KEY);
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
-
         <div className="bg-white shadow-md rounded-lg p-6">
           <h2 className="text-2xl font-semibold mb-4">Productos Disponibles</h2>
           {loading ? (
@@ -205,8 +212,8 @@ console.log("Secret Key:", process.env.NEXT_PUBLIC_AWS_SECRET_ACCESS_KEY);
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {filteredProductos.map((producto) => (
-                <div 
-                  key={producto.product_id} 
+                <div
+                  key={producto.product_id}
                   className={`border p-4 rounded shadow ${producto.stock < 10 ? 'bg-red-100' : ''}`}
                 >
                   <h3 className="font-bold">{producto.nombre}</h3>
@@ -224,8 +231,6 @@ console.log("Secret Key:", process.env.NEXT_PUBLIC_AWS_SECRET_ACCESS_KEY);
           )}
         </div>
       </div>
-
-      {/* Sección de Carrito y Método de Pago */}
       <div className="w-full md:w-2/5 p-4">
         <div className="bg-gray-100 rounded-lg p-6 shadow-md mb-4">
           <h2 className="text-2xl font-semibold mb-4 text-center">Carrito de Compras</h2>
@@ -245,22 +250,24 @@ console.log("Secret Key:", process.env.NEXT_PUBLIC_AWS_SECRET_ACCESS_KEY);
                 </thead>
                 <tbody className="divide-y divide-gray-300">
                   {carrito.map((item) => (
-                    <tr key={item.product_id} className="hover:bg-gray-100 transition duration-200">
-                      <td className="py-4 px-4">{item.nombre}</td>
-                      <td className="py-4 px-4">
+                    <tr key={item.product_id} className="hover:bg-gray-50">
+                      <td className="py-2 px-4 border-b">{item.nombre}</td>
+                      <td className="py-2 px-4 border-b">
                         <input
                           type="number"
                           min="1"
                           value={item.quantity}
+                          onChange={(e) =>
+                            handleQuantityChange(item.product_id, parseInt(e.target.value, 10))
+                          }
                           className="w-16 border rounded p-1 text-center"
-                          onChange={(e) => handleQuantityChange(item.product_id, Number(e.target.value))}
                         />
                       </td>
-                      <td className="py-4 px-4">${item.precio_venta}</td>
-                      <td className="py-4 px-4 font-semibold">${item.precio_venta * item.quantity}</td>
-                      <td className="py-4 px-4">
+                      <td className="py-2 px-4 border-b">${item.precio_venta}</td>
+                      <td className="py-2 px-4 border-b">${item.precio_venta * item.quantity}</td>
+                      <td className="py-2 px-4 border-b">
                         <button
-                          className="text-red-500 hover:text-red-700 transition duration-200"
+                          className="text-red-500 hover:text-red-700"
                           onClick={() => handleRemoveFromCart(item.product_id)}
                         >
                           Eliminar
@@ -270,53 +277,35 @@ console.log("Secret Key:", process.env.NEXT_PUBLIC_AWS_SECRET_ACCESS_KEY);
                   ))}
                 </tbody>
               </table>
-              <h3 className="font-bold text-xl mt-4 text-right">Total: ${total}</h3>
             </div>
           )}
         </div>
-
-        {/* Método de Pago y Cliente */}
-        <div className="bg-white rounded-lg p-6 shadow-md">
-          <h2 className="text-2xl font-semibold mb-4 text-center">Método de Pago</h2>
-          <div className="mb-6">
-              <label className="block text-gray-700 text-sm font-bold mb-2">
-                Cliente (ID)
-              </label>
-              <input
-                className="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                value={clienteIdInput}
-                onChange={(e) => setClienteIdInput(e.target.value)}
-                onKeyPress={handleClienteIdKeyPress}
-              />
-                          <div className="mb-6">
-              <label className="block text-gray-700 text-sm font-bold mb-2">
-                Cliente Seleccionado
-              </label>
-              <input
-                className="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                value={selectedCliente}
-                readOnly
-              />
-            </div>
-            </div>
-          <select
-            value={metodoPago}
-            onChange={(e) => setMetodoPago(e.target.value)}
-            className="mb-4 p-2 border rounded w-full"
-          >
-            <option value="">Seleccionar Método de Pago</option>
-            <option value="efectivo">Efectivo</option>
-            <option value="tarjeta">Tarjeta</option>
-            <option value="transferencia">Nequi</option>
-            <option value="transferencia">Daviplata</option>
-            <option value="transferencia">Addi</option>
-            <option value="transferencia">Sistecredito</option>
-          </select>
+        <div className="bg-gray-100 p-4 rounded-lg shadow-md">
+          <h2 className="text-xl font-semibold mb-4">Detalles de la Venta</h2>
+          <div className="mb-4">
+            <label className="block font-semibold">Método de Pago:</label>
+            <select
+              value={metodoPago}
+              onChange={(e) => setMetodoPago(e.target.value)}
+              className="border rounded w-full p-2 mt-2"
+            >
+              <option value="">Seleccione un método</option>
+              <option value="Efectivo">Efectivo</option>
+              <option value="Tarjeta">Tarjeta</option>
+              <option value="Transferencia">Transferencia</option>
+            </select>
+          </div>
+          <div className="mb-4">
+            <label className="block font-semibold">Total:</label>
+            <p className="text-lg">${total}</p>
+          </div>
+          {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
+          {success && <p className="text-green-500 text-sm mb-2">{success}</p>}
           <button
-            className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded transition duration-200"
+            className="w-full bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 mt-4"
             onClick={finalizarVenta}
           >
-            Finalizar Compra
+            Finalizar Venta
           </button>
         </div>
       </div>
