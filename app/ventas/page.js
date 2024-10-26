@@ -81,6 +81,7 @@ export default function PanelVentas() {
   };
 
   const buscarProductoPorId = async () => {
+    
     if (!searchTerm.trim()) return;
 
     const params = {
@@ -105,7 +106,7 @@ export default function PanelVentas() {
 
   const buscarClientePorId = async () => {
     const params = {
-      TableName: 'Clientes',
+      TableName: 'Cliente',
       Key: {
         cliente_id: clienteIdInput.trim(),
       },
@@ -295,6 +296,18 @@ export default function PanelVentas() {
               <option value="Transferencia">Transferencia</option>
             </select>
           </div>
+          <div className="mb-4">
+          <label className="block font-semibold">Cliente:</label>
+          <input
+            type="text"
+            placeholder="Ingrese ID del cliente"
+            value={clienteIdInput}
+            onChange={(e) => setClienteIdInput(e.target.value)}
+            onKeyPress={handleClienteIdKeyPress}
+            className="border rounded w-full p-2 mt-2"
+          />
+          <p className="text-red-800 mt-2">Cliente seleccionado: {selectedCliente}</p>
+        </div>
           <div className="mb-4">
             <label className="block font-semibold">Total:</label>
             <p className="text-lg">${total}</p>
