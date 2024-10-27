@@ -197,6 +197,10 @@ const [colorFilter, setColorFilter] = useState('');
     const productData = {
       ...newProduct,
       product_id: parseInt(newProduct.product_id, 10),
+      precio_costo: parseFloat(newProduct.precio_costo), // Convertir a número
+      precio_venta: parseFloat(newProduct.precio_costo), // Convertir a número
+
+      stock: parseInt(newProduct.stock, 10), // Convertir a número
       variaciones: variaciones
     };
 

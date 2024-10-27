@@ -1,25 +1,41 @@
 'use client'; // Indica que este componente es un Client Component
 
-import { useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation'; // Importar useSearchParams
+import { useEffect, useState } from 'react'; // Importar useEffect y useState
 
-const FinalizarVenta = () => {
-  const router = useRouter();
+export default function Factura() {
+  const searchParams = useSearchParams(); // Obtener los parámetros de búsqueda
+  const id = searchParams.get('id'); // Obtener el ID de la venta
+  const [factura, setFactura] = useState(null); // Estado para almacenar la factura
 
-  const handleFinalizar = async () => {
-    // Lógica para finalizar la venta
-    const ventaDetalles = {
-      // Detalles de la venta, como productos, total, etc.
+  useEffect(() => {
+    const obtenerFactura = async () => {
+      if (id) {
+        try {
+          const response = await fetch(`/api/factura?id=${id}`); // Ajusta esta URL a tu API
+          const data = await response.json();
+          setFactura(data);
+        } catch (error) {
+          console.error("Error al obtener la factura:", error);
+        }
+      }
     };
 
-    // Aquí puedes enviar los detalles a tu backend o almacenarlos
-
-    // Redirigir a la página de la factura con el ID de la venta
-    router.push(`/factura?id=id-de-la-venta`); // Cambia 'id-de-la-venta' al ID real
-  };
+    obtenerFactura(); // Llamar a la función para obtener la factura
+  }, [id]); // Ejecutar el efecto cada vez que cambie el ID
 
   return (
-    <button onClick={handleFinalizar}>Finalizar Venta</button>
+    <div>
+      <h1>Factura</h1>
+      {/* Muestra los detalles de la factura */}
+      {factura ? (
+        <div>
+          <p>Detalles de la venta: {JSON.stringify(factura)}</p>
+          <p>Total: {factura.total}</p>
+        </div>
+      ) : (
+        <p>Cargando...</p>
+      )}
+    </div>
   );
-};
-
-export default FinalizarVenta;
+}

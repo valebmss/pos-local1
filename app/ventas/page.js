@@ -219,10 +219,15 @@ const [cambio, setCambio] = useState(0);
     try {
       const ventaId = ventaData.Item.venta_id;
       await ddbDocClient.send(new PutCommand(ventaData));
+      console.log(carrito)
       await actualizarInventario(carrito);
       setSuccess("Venta guardada exitosamente.");
       setCarrito([]);
-      router.push(`/factura?id=${ventaId}`);
+      setError("");
+      setTotal(0);
+      setClienteIdInput("");
+
+      //router.push(`/factura?id=${ventaId}`);
 
     } catch (err) {
       setError("Error al guardar la venta en DynamoDB.");
@@ -230,7 +235,6 @@ const [cambio, setCambio] = useState(0);
     }
 
   };
-
   const actualizarInventario = async (itemsVendidos) => {
     for (const item of itemsVendidos) {
       const params = {
@@ -240,11 +244,16 @@ const [cambio, setCambio] = useState(0);
         ExpressionAttributeValues: { ':cantidadVendida': item.quantity },
         ConditionExpression: 'stock >= :cantidadVendida',
       };
-
+  
       try {
         await ddbDocClient.send(new UpdateCommand(params));
       } catch (err) {
-        console.error(`Error al actualizar el stock del producto ${item.nombre}:`, err);
+        if (err.name === 'ConditionalCheckFailedException') {
+          console.error(`No hay suficiente stock para el producto ${item.nombre}.`);
+          setError(`No hay suficiente stock para el producto ${item.nombre}.`);
+        } else {
+          console.error(`Error al actualizar el stock del producto ${item.nombre}:`, err);
+        }
       }
     }
   };
