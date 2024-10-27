@@ -31,6 +31,8 @@ export default function PanelVentas() {
   const [metodoPago, setMetodoPago] = useState('');
   const [clienteIdInput, setClienteIdInput] = useState('');
   const [selectedCliente, setSelectedCliente] = useState('');
+  const [isNewClienteFormVisible, setIsNewClienteFormVisible] = useState(false);
+  const [newClienteData, setNewClienteData] = useState({ celular: '', correo: '', nombre: '' });
   const clienteDefault = "No definido";
 
   useEffect(() => {
@@ -117,13 +119,44 @@ export default function PanelVentas() {
       const data = await ddbDocClient.send(new GetCommand(params));
       if (data.Item) {
         setSelectedCliente(data.Item.nombre);
+        setIsNewClienteFormVisible(false); // Cliente existente encontrado
       } else {
         setSelectedCliente(clienteDefault);
+        setIsNewClienteFormVisible(true); // Mostrar formulario de nuevo cliente
       }
     } catch (err) {
       console.error('Error al buscar cliente por cliente_id:', err);
     }
   };
+
+  const handleNewClienteDataChange = (e) => {
+    const { name, value } = e.target;
+    setNewClienteData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const agregarNuevoCliente = async () => {
+    const nuevoCliente = {
+      cliente_id: clienteIdInput.trim(),
+      ...newClienteData,
+    };
+
+    const params = {
+      TableName: 'Cliente',
+      Item: nuevoCliente,
+    };
+
+    try {
+      await ddbDocClient.send(new PutCommand(params));
+      setSelectedCliente(newClienteData.nombre);
+      setIsNewClienteFormVisible(false);
+      setNewClienteData({ celular: '', correo: '', nombre: '' });
+      setSuccess("Nuevo cliente agregado exitosamente.");
+    } catch (err) {
+      console.error('Error al agregar nuevo cliente:', err);
+      setError("Error al agregar el nuevo cliente.");
+    }
+  };
+
 
   useEffect(() => {
     const totalAmount = carrito.reduce((acc, item) => acc + item.precio_venta * item.quantity, 0);
@@ -311,12 +344,48 @@ export default function PanelVentas() {
           />
           <p className="text-red-800 mt-2">Cliente seleccionado: {selectedCliente}</p>
         </div>
+        {isNewClienteFormVisible && (
+            <div className="bg-gray-100 p-4 rounded-lg shadow-md mb-4">
+              <h2 className="text-xl font-semibold mb-4">Agregar Nuevo Cliente</h2>
+              <input
+                type="text"
+                placeholder="Nombre"
+                name="nombre"
+                value={newClienteData.nombre}
+                onChange={handleNewClienteDataChange}
+                className="border rounded w-full p-2 mb-2"
+              />
+              <input
+                type="text"
+                placeholder="Celular"
+                name="celular"
+                value={newClienteData.celular}
+                onChange={handleNewClienteDataChange}
+                className="border rounded w-full p-2 mb-2"
+              />
+              <input
+                type="email"
+                placeholder="Correo"
+                name="correo"
+                value={newClienteData.correo}
+                onChange={handleNewClienteDataChange}
+                className="border rounded w-full p-2 mb-2"
+              />
+              <button
+                className="mt-2 bg-green-500 text-white py-1 px-3 rounded"
+                onClick={agregarNuevoCliente}
+              >
+                Guardar Nuevo Cliente
+              </button>
+            </div>
+          )}
+
           <div className="mb-4">
             <label className="block font-semibold">Total:</label>
             <p className="text-lg">${total}</p>
           </div>
           {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
-          {success && <p className="text-green-500 text-sm mb-2">{success}</p>}
+          {success && <p className="text-green-500 text-md mb-2">{success}</p>}
           <button
             className="w-full bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 mt-4"
             onClick={finalizarVenta}

@@ -14,6 +14,8 @@ export default function MainLayout({ children }) {
           <Link href="/ventas" className="hover:bg-gray-700 p-3 rounded transition">Ventas</Link>
           <Link href="/inventario" className="hover:bg-gray-700 p-3 rounded transition">Inventario</Link>
           <Link href="/provedores" className="hover:bg-gray-700 p-3 rounded transition">Proveedores</Link>
+          <Link href="/clientes" className="hover:bg-gray-700 p-3 rounded transition">Clientes</Link>
+
           <Link href="/reports" className="hover:bg-gray-700 p-3 rounded transition">Reportes</Link>
           <Link href="/logout" className="hover:bg-red-700 p-3 rounded transition">Cerrar sesión</Link>
         </nav>
