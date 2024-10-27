@@ -3,6 +3,7 @@
 import ddbDocClient from "@/lib/aws";
 import { ScanCommand, PutCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
 import { useEffect, useState, useMemo } from 'react';
+import MainLayout from "../components/MainLayout";
 
 const fetchProveedorData = async () => {
   const params = {
@@ -220,6 +221,8 @@ export default function Proveedor() {
   };
 
   return (
+    <MainLayout>
+
     <div className="container mx-auto py-8">
       <h1 className="text-3xl font-bold mb-8 text-center">Gestión de Proveedores</h1>
 
@@ -366,5 +369,7 @@ export default function Proveedor() {
         <p className="text-center">Cargando proveedores...</p>
       )}
     </div>
+    </MainLayout>
+
   );
 }

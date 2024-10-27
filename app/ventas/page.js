@@ -3,6 +3,7 @@
 import { ScanCommand, UpdateCommand, GetCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
 import ddbDocClient from "@/lib/aws";
 import { useEffect, useState } from 'react';
+import MainLayout from "../components/MainLayout";
 
 const fetchInventoryData = async () => {
   const params = {
@@ -196,6 +197,8 @@ export default function PanelVentas() {
   };
 
   return (
+    <MainLayout>
+
     <div className="container mx-auto py-8 flex flex-col md:flex-row">
       <div className="w-full md:w-3/5 mb-6">
         <h1 className="text-3xl font-bold mb-8 text-center">Panel de Ventas</h1>
@@ -323,5 +326,7 @@ export default function PanelVentas() {
         </div>
       </div>
     </div>
+        </MainLayout>
+
   );
 }

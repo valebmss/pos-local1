@@ -8,6 +8,7 @@ import { useEffect, useState, useRef } from 'react';
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { CSVLink } from "react-csv";
+import MainLayout from '../components/MainLayout';
 
 const fetchInventoryData = async () => {
   const params = { TableName: 'Inventario' };
@@ -359,6 +360,8 @@ const uniqueColors = Array.from(colors); // Si también quieres incluir colores
 
 
   return (
+    <MainLayout>
+
     <div className="container mx-auto px-4 py-6">
       <h1 className="text-2xl font-bold mb-4">Inventario</h1>
 
@@ -707,5 +710,7 @@ const uniqueColors = Array.from(colors); // Si también quieres incluir colores
         </table>
       </div>
     </div>
+    </MainLayout>
+
   );
 }

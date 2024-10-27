@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import jsPDF from 'jspdf';
 import 'react-datepicker/dist/react-datepicker.css';
 import 'jspdf-autotable';
+import MainLayout from '../components/MainLayout';
 
 
 const ReportsPage = () => {
@@ -121,6 +122,8 @@ const ReportsPage = () => {
   };
 
   return (
+    <MainLayout>
+
     <div className="max-w-3xl mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
       <h1 className="text-2xl font-bold mb-4">Generar Reporte de Ventas</h1>
       <div className="mb-4">
@@ -226,6 +229,8 @@ const ReportsPage = () => {
         </ul>
       </div>
     </div>
+    </MainLayout>
+
   );
 };
 export default ReportsPage;
