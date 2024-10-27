@@ -32,6 +32,8 @@ export default function PanelVentas() {
   const [clienteIdInput, setClienteIdInput] = useState('');
   const [selectedCliente, setSelectedCliente] = useState('');
   const [isNewClienteFormVisible, setIsNewClienteFormVisible] = useState(false);
+  const [montoPagado, setMontoPagado] = useState(0);
+const [cambio, setCambio] = useState(0);
   const [newClienteData, setNewClienteData] = useState({ celular: '', correo: '', nombre: '' });
   const clienteDefault = "No definido";
 
@@ -82,6 +84,16 @@ export default function PanelVentas() {
       await buscarProductoPorId();
     }
   };
+
+  const handleMontoPagadoChange = (e) => {
+    const value = parseInt(e.target.value, 10);
+    setMontoPagado(isNaN(value) ? "" : value);
+  };
+  
+  useEffect(() => {
+    setCambio(montoPagado - total);
+  }, [montoPagado, total]);
+  
 
   const buscarProductoPorId = async () => {
     
@@ -209,6 +221,9 @@ export default function PanelVentas() {
       setError("Error al guardar la venta en DynamoDB.");
       console.error('Error al guardar la venta en DynamoDB:', err);
     }
+    if (success) {
+      router.push(`/factura/${ventaId}`); // Redirige a la página de factura
+    }
   };
 
   const actualizarInventario = async (itemsVendidos) => {
@@ -260,7 +275,7 @@ export default function PanelVentas() {
                     className="mt-2 bg-blue-500 text-white py-1 px-3 rounded"
                     onClick={() => handleAddToCart(producto)}
                   >
-                    Agregar al Carrito
+                    Agregar
                   </button>
                 </div>
               ))}
@@ -382,8 +397,30 @@ export default function PanelVentas() {
 
           <div className="mb-4">
             <label className="block font-semibold">Total:</label>
-            <p className="text-lg">${total}</p>
+            <p className="text-lg">
+  ${new Intl.NumberFormat('es-CO').format(total)}
+</p>
           </div>
+          <div className="mb-4">
+  <label className="block font-semibold">Monto Pagado:</label>
+  <input
+    type="number"
+    value={montoPagado}
+    onChange={handleMontoPagadoChange}
+    className="border rounded w-full p-2 mt-2"
+      min="1000"
+  step="1000"
+  />
+</div>
+<div className="mb-4">
+  <label className="block font-semibold text-lg text-blue-700">Cambio:</label>
+  <p className="text-lg">
+    {cambio >= 0
+      ? `$${new Intl.NumberFormat('es-CO').format(cambio)}`
+      : `Falta $${new Intl.NumberFormat('es-CO').format(Math.abs(cambio))}`}
+  </p>
+</div>
+
           {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
           {success && <p className="text-green-500 text-md mb-2">{success}</p>}
           <button

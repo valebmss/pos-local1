@@ -310,7 +310,7 @@ export default function Cliente() {
       {/* Tabla de Clientees */}
       {!loading ? (
         <div className="bg-white shadow-md rounded-lg p-6">
-          <h2 className="text-2xl font-semibold mb-4">Lista de Clientees</h2>
+          <h2 className="text-2xl font-semibold mb-4">Lista de Clientes</h2>
           <div className="overflow-x-auto">
             <table className="min-w-full table-auto">
               <thead>
@@ -370,7 +370,7 @@ export default function Cliente() {
                 ) : (
                   <tr>
                     <td colSpan="4" className="text-center py-4">
-                      No hay Clientees que coincidan con la búsqueda.
+                      No hay clientes que coincidan con la búsqueda.
                     </td>
                   </tr>
                 )}
@@ -379,7 +379,7 @@ export default function Cliente() {
           </div>
         </div>
       ) : (
-        <p className="text-center">Cargando Clientees...</p>
+        <p className="text-center">Cargando cientes...</p>
       )}
     </div>
     </MainLayout>
