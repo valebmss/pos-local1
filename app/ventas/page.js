@@ -3,6 +3,8 @@
 import { ScanCommand, UpdateCommand, GetCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
 import ddbDocClient from "@/lib/aws";
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+
 import MainLayout from "../components/MainLayout";
 
 const fetchInventoryData = async () => {
@@ -36,6 +38,8 @@ export default function PanelVentas() {
 const [cambio, setCambio] = useState(0);
   const [newClienteData, setNewClienteData] = useState({ celular: '', correo: '', nombre: '' });
   const clienteDefault = "No definido";
+  const router = useRouter();
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -213,17 +217,18 @@ const [cambio, setCambio] = useState(0);
     };
 
     try {
+      const ventaId = ventaData.Item.venta_id;
       await ddbDocClient.send(new PutCommand(ventaData));
       await actualizarInventario(carrito);
       setSuccess("Venta guardada exitosamente.");
       setCarrito([]);
+      router.push(`/factura?id=${ventaId}`);
+
     } catch (err) {
       setError("Error al guardar la venta en DynamoDB.");
       console.error('Error al guardar la venta en DynamoDB:', err);
     }
-    if (success) {
-      router.push(`/factura/${ventaId}`); // Redirige a la página de factura
-    }
+
   };
 
   const actualizarInventario = async (itemsVendidos) => {

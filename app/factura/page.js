@@ -1,31 +1,25 @@
-const Factura = ({ ventaData }) => {
-    const handleImprimir = () => {
-      window.print();
+'use client'; // Indica que este componente es un Client Component
+
+import { useRouter } from 'next/navigation';
+
+const FinalizarVenta = () => {
+  const router = useRouter();
+
+  const handleFinalizar = async () => {
+    // Lógica para finalizar la venta
+    const ventaDetalles = {
+      // Detalles de la venta, como productos, total, etc.
     };
-  
-    const handleEnviar = (destino, tipo) => {
-      if (tipo === 'email') {
-        // lógica para enviar correo
-      } else if (tipo === 'whatsapp') {
-        const mensaje = `Factura para ${ventaData.cliente} por un total de ${ventaData.monto_total}`;
-        window.open(`https://wa.me/${destino}?text=${encodeURIComponent(mensaje)}`);
-      }
-    };
-  
-    return (
-      <div>
-        <h2>Factura #{ventaData.venta_id}</h2>
-        <button onClick={handleImprimir}>Imprimir</button>
-        <div>
-          <input
-            type="text"
-            placeholder="Correo o WhatsApp"
-            onChange={(e) => setDestino(e.target.value)}
-          />
-          <button onClick={() => handleEnviar(destino, 'email')}>Enviar por Correo</button>
-          <button onClick={() => handleEnviar(destino, 'whatsapp')}>Enviar por WhatsApp</button>
-        </div>
-      </div>
-    );
+
+    // Aquí puedes enviar los detalles a tu backend o almacenarlos
+
+    // Redirigir a la página de la factura con el ID de la venta
+    router.push(`/factura?id=id-de-la-venta`); // Cambia 'id-de-la-venta' al ID real
   };
-  
+
+  return (
+    <button onClick={handleFinalizar}>Finalizar Venta</button>
+  );
+};
+
+export default FinalizarVenta;
