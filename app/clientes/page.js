@@ -57,7 +57,8 @@ export default function Cliente() {
   const [newCliente, setNewCliente] = useState({
     cliente_id: '',
     nombre: '',
-    tienda: '',
+    correo: '',
+    celular: '',
   });
   const [editingCliente, setEditingCliente] = useState(null); // Para editar
   const [error, setError] = useState(null);
@@ -136,7 +137,9 @@ export default function Cliente() {
       setNewCliente({
         cliente_id: '',
         nombre: '',
-        tienda: '',
+        correo: '',
+        celular: '',
+
       });
       setEditingCliente(null);
       setError(null); // Limpiar mensajes de error
@@ -208,8 +211,10 @@ export default function Cliente() {
     return sortedClientees.filter(
       (prov) =>
         prov.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        prov.tienda.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        prov.Cliente_id.toLowerCase().includes(searchQuery.toLowerCase())
+        prov.correo.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        prov.celular.toLowerCase().includes(searchQuery.toLowerCase()) ||
+
+        prov.cliente_id.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [sortedClientees, searchQuery]);
 
@@ -265,15 +270,15 @@ export default function Cliente() {
 
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700">
-              Tienda
+              correo
             </label>
             <input
               type="text"
-              name="tienda"
-              value={newCliente.tienda}
+              name="correo"
+              value={newCliente.correo}
               onChange={handleInputChange}
               className="mt-1 p-2 w-full border border-gray-300 rounded"
-              placeholder="Ingrese tienda del Cliente"
+              placeholder="Ingrese correo del Cliente"
               required
             />
           </div>
@@ -297,7 +302,7 @@ export default function Cliente() {
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Buscar por ID, Nombre o Tienda..."
+          placeholder="Buscar por ID, Nombre o correo..."
           className="p-2 w-full border border-gray-300 rounded"
         />
       </div>
@@ -324,9 +329,15 @@ export default function Cliente() {
                   </th>
                   <th
                     className="px-4 py-2 text-left text-sm font-semibold text-gray-600 cursor-pointer"
-                    onClick={() => handleSort('tienda')}
+                    onClick={() => handleSort('nombre')}
                   >
-                    Tienda {getSortIndicator('tienda')}
+                    Celular {getSortIndicator('celular')}
+                  </th>
+                  <th
+                    className="px-4 py-2 text-left text-sm font-semibold text-gray-600 cursor-pointer"
+                    onClick={() => handleSort('correo')}
+                  >
+                    correo {getSortIndicator('correo')}
                   </th>
                   <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Acciones</th>
                 </tr>
@@ -337,7 +348,9 @@ export default function Cliente() {
                     <tr key={Cliente.cliente_id} className="border-t">
                       <td className="px-4 py-2">{Cliente.cliente_id}</td>
                       <td className="px-4 py-2">{Cliente.nombre}</td>
-                      <td className="px-4 py-2">{Cliente.tienda}</td>
+                      <td className="px-4 py-2">{Cliente.celular}</td>
+
+                      <td className="px-4 py-2">{Cliente.correo}</td>
                       <td className="px-4 py-2 flex space-x-2">
                         <button
                           className="text-blue-500 hover:underline"
